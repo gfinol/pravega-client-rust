@@ -34,11 +34,13 @@ use tokio::sync::oneshot::error::TryRecvError;
 use tokio::sync::{mpsc, Mutex};
 use tokio::time::timeout;
 use tracing::{debug, error, info, warn};
+// use std::thread::{sleep};
 
 type ReaderErrorWithOffset = (ReaderError, i64);
 type SegmentReadResult = Result<SegmentDataBuffer, ReaderErrorWithOffset>;
 
-const REBALANCE_INTERVAL: Duration = Duration::from_secs(10);
+// Readers will never rebalance
+const REBALANCE_INTERVAL: Duration = Duration::from_secs(u64::MAX);
 
 const READ_BUFFER_SIZE: i32 = 8 * 1024 * 1024; // max size for a single Event
 
@@ -160,14 +162,21 @@ impl EventReader {
         id: String,
         rg_state: Arc<Mutex<ReaderGroupState>>,
         factory: ClientFactoryAsync,
+        n_readers: u32,
     ) -> Self {
+        let s: String = id.clone();
+        
+        // Wait for 3 seconds to ensure that other readers are initialized.
+        // sleep(Duration::from_secs(3));
+
         let reader = Reader::from(id);
         let new_segments_to_acquire = rg_state
             .lock()
             .await
-            .compute_segments_to_acquire_or_release(&reader)
+            .compute_segments_to_acquire_or_release_readers_given(&reader, n_readers)
             .await
             .expect("should compute segments");
+        println!("reader id:{} new_segments_to_acquire: {}", s, new_segments_to_acquire);
         // attempt acquiring the desired number of segments.
         if new_segments_to_acquire > 0 {
             for _ in 0..new_segments_to_acquire {

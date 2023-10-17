@@ -162,7 +162,7 @@ impl ReaderGroup {
     /// let rg = client_factory.create_reader_group(scope, "rg".to_string(), stream).await;
     /// let reader = rg.create_reader("reader".to_string()).await;
     /// ```
-    pub async fn create_reader(&self, reader_id: String) -> EventReader {
+    pub async fn create_reader(&self, reader_id: String, n_readers: u32) -> EventReader {
         let r: Reader = reader_id.into();
         self.state
             .lock()
@@ -170,7 +170,7 @@ impl ReaderGroup {
             .add_reader(&r)
             .await
             .expect("Error while creating the reader");
-        EventReader::init_reader(r.name, self.state.clone(), self.client_factory.clone()).await
+        EventReader::init_reader(r.name, self.state.clone(), self.client_factory.clone(), n_readers).await
     }
 
     /// Returns the readers which are currently online.
@@ -526,7 +526,7 @@ mod tests {
         };
         client_factory
             .runtime()
-            .block_on(rg.create_reader("r1".to_string()));
+            .block_on(rg.create_reader("r1".to_string(), 1));
     }
 
     #[test]

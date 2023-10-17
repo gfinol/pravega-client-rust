@@ -377,6 +377,54 @@ impl ReaderGroupState {
             num_of_segments, num_of_readers
         );
         let num_segments_per_reader = num_of_segments / num_of_readers;
+                let expected_segment_count_per_reader = if num_of_segments % num_of_readers == 0 {
+            num_segments_per_reader
+        } else {
+            num_segments_per_reader + 1
+        };
+        let current_segment_count = assigned_segment_map.get(&reader.name).map(|v| {
+            let seg: HashMap<ScopedSegment, Offset> =
+                deserialize_from(&v.data).expect("deserialize of assigned segments");
+            seg.len()
+        });
+        let expected: isize = expected_segment_count_per_reader.try_into().unwrap();
+        let current: isize = current_segment_count.unwrap_or_default().try_into().unwrap();
+        Ok(expected - current)
+    }
+
+    /// Compute the number of segments to acquire.
+    pub async fn compute_segments_to_acquire_or_release_readers_given(
+        &mut self,
+        reader: &Reader,
+        n_readers: u32,
+    ) -> Result<isize, ReaderGroupStateError> {
+        match self.sync.fetch_updates().await {
+            Ok(update_count) => debug!("Number of updates read is {:?}", update_count),
+            Err(TableError::TableDoesNotExist { .. }) => {
+                return Err(ReaderGroupStateError::ReaderAlreadyOfflineError {
+                    error_msg: String::from("the ReaderGroup is deleted"),
+                    source: SynchronizerError::SyncPreconditionError {
+                        error_msg: String::from("Precondition failure"),
+                    },
+                })
+            }
+            _ => panic!("Fetch updates failed after all retries"),
+        }
+        let assigned_segment_map = self.sync.get_inner_map(ASSIGNED);
+        let num_of_readers = n_readers as usize;
+        let mut num_assigned_segments = 0;
+        for v in assigned_segment_map.values() {
+            let segments: HashMap<ScopedSegment, Offset> =
+                deserialize_from(&v.data).expect("deserialize assigned segments");
+            num_assigned_segments += segments.len();
+        }
+        let num_of_segments = num_assigned_segments + self.sync.get_inner_map(UNASSIGNED).len();
+        debug!(
+            " number of segments {:?}, number of readers {:?} in reader group state",
+            num_of_segments, num_of_readers
+        );
+        // let num_segments_per_reader = num_of_segments / num_of_readers;
+        let num_segments_per_reader = 1 as usize;
         let expected_segment_count_per_reader = if num_of_segments % num_of_readers == 0 {
             num_segments_per_reader
         } else {
@@ -391,6 +439,7 @@ impl ReaderGroupState {
         let current: isize = current_segment_count.unwrap_or_default().try_into().unwrap();
         Ok(expected - current)
     }
+
 
     /// Return the list of all segments.
     pub async fn get_segments(&mut self) -> HashSet<ScopedSegment> {

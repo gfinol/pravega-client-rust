@@ -128,14 +128,14 @@ impl StreamReaderGroup {
     ///     print(event.data())
     ///```
     ///
-    pub fn create_reader(&self, reader_name: &str) -> PyResult<StreamReader> {
+    pub fn create_reader(&self, reader_name: &str, n_readers: u32) -> PyResult<StreamReader> {
         info!(
             "Creating reader {:?} under reader group {:?}",
             reader_name, self.reader_group.name
         );
         let reader = self
             .runtime_handle
-            .block_on(self.reader_group.create_reader(reader_name.to_string()));
+            .block_on(self.reader_group.create_reader(reader_name.to_string(), n_readers));
         let stream_reader = StreamReader::new(
             Arc::new(Mutex::new(reader)),
             self.runtime_handle.clone(),
