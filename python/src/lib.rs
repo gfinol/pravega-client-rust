@@ -21,6 +21,7 @@ mod stream_reader_group;
 mod stream_writer;
 mod stream_writer_transactional;
 mod transaction;
+mod counters_table;
 
 cfg_if! {
     if #[cfg(feature = "python_binding")] {
@@ -33,6 +34,7 @@ cfg_if! {
         use stream_writer::StreamWriter;
         use stream_reader::StreamReader;
         use stream_reader_group::StreamReaderGroup;
+        use counters_table::CountersTable;
         use crate::stream_writer_transactional::StreamTxnWriter;
         use crate::transaction::StreamTransaction;
         use pyo3::create_exception;
@@ -59,6 +61,7 @@ fn pravega_client(py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<StreamScalingPolicy>()?;
     m.add_class::<StreamRetentionPolicy>()?;
     m.add_class::<ByteStream>()?;
+    m.add_class::<CountersTable>()?;
     let txn_exception = py.get_type::<TxnFailedException>();
     txn_exception.setattr("__doc__", TXNFAILED_EXCEPTION_DOCSTRING)?;
     m.add("TxnFailedException", txn_exception)?;

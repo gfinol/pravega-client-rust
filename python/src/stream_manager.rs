@@ -14,6 +14,7 @@ cfg_if! {
         use crate::stream_writer::StreamWriter;
         use crate::stream_reader_group::StreamReaderGroup;
         use crate::byte_stream::ByteStream;
+        use crate::counters_table::CountersTable;
         use pravega_client::client_factory::ClientFactory;
         use pravega_client_shared::*;
         use pravega_client_config::{ClientConfig, ClientConfigBuilder};
@@ -393,6 +394,32 @@ impl StreamManager {
             Ok(t) => Ok(t),
             Err(e) => Err(exceptions::PyValueError::new_err(format!("{:?}", e))),
         }
+    }
+
+    ///
+    /// Create a Key Value Table in Pravega.
+    /// ```
+    /// import pravega_client
+    /// manager = pravega_client.StreamManager("tcp://127.0.0.1:9090")
+    /// # Create a key value table against an already created Pravega scope.
+    /// table = manager.create_counter_table("scope", "table")
+    /// ```
+    ///
+    #[pyo3(text_signature = "($self, scope_name, table_name)")]
+    #[args(scope_name, table_name)]
+    pub fn create_counter_table(
+        &self,
+        scope_name: &str,
+        table_name: &str,
+    ) -> PyResult<CountersTable> {
+        let scope = Scope::from(scope_name.to_string());
+        let handle = self.cf.runtime_handle();
+        let table = handle.block_on(self.cf.create_table(scope, table_name.to_string()));
+        let key_value_table = CountersTable::new(
+            table,
+            handle,
+        );
+        Ok(key_value_table)
     }
 
     ///
