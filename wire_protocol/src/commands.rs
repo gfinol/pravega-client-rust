@@ -22,6 +22,7 @@ use std::hash::{Hash, Hasher};
 use std::i64;
 use std::io::Cursor;
 use std::io::{Read, Write};
+use serde_repr::{Serialize_repr, Deserialize_repr};
 
 pub const WIRE_VERSION: i32 = 15;
 pub const OLDEST_COMPATIBLE_VERSION: i32 = 5;
@@ -919,6 +920,16 @@ impl Reply for SegmentAttributeCommand {
 /**
  * 24. UpdateSegmentAttribute Command
  */
+#[derive(Serialize_repr, Deserialize_repr, PartialEq, Debug, Clone)]
+#[repr(u8)]
+pub enum AttributeUpdateType {
+    None = 0,
+    Replace = 1,
+    ReplaceIfGreater = 2,
+    Accumulate = 3,
+    ReplaceIfEquals = 4,
+}
+
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
 pub struct UpdateSegmentAttributeCommand {
     pub request_id: i64,
@@ -927,6 +938,7 @@ pub struct UpdateSegmentAttributeCommand {
     pub new_value: i64,
     pub expected_value: i64,
     pub delegation_token: String,
+    pub update_type: AttributeUpdateType,
 }
 
 impl Command for UpdateSegmentAttributeCommand {

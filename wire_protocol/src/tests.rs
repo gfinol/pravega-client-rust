@@ -331,6 +331,7 @@ fn test_update_segment_attribute() {
             new_value: 2,
             expected_value: 2,
             delegation_token: token,
+            update_type: AttributeUpdateType::ReplaceIfEquals,
         }));
     test_command(update_segment_attribute);
 }

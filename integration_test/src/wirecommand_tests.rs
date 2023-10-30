@@ -368,6 +368,7 @@ async fn test_update_and_get_segment_attribute(factory: &ClientFactory) {
         new_value: 1,
         expected_value: i64::MIN,
         delegation_token: String::from(""),
+        update_type: AttributeUpdateType::ReplaceIfEquals,
     });
     let reply = Replies::SegmentAttributeUpdated(SegmentAttributeUpdatedCommand {
         request_id: 4,
